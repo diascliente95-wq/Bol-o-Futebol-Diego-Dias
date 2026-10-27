@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cada participante só pode consultar e alterar o próprio perfil.
+    match /usuarios/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['nome', 'pontos', 'ativo', 'criadoEm'])
+        && request.resource.data.pontos == 0
+        && request.resource.data.ativo == true;
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nome']);
+      allow delete: if false;
+    }
+
+    // Cada participante só pode ler e gravar os próprios palpites.
+    match /palpites/{userId} {
+      allow read, create, update: if request.auth != null
+        && request.auth.uid == userId
+        && (!('usuarioId' in request.resource.data) || request.resource.data.usuarioId == request.auth.uid);
+      allow delete: if false;
+    }
+  }
+}
